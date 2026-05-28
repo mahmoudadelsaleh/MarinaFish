@@ -1,3 +1,5 @@
+const cart = new Map(); // name -> {name,unitPrice,priceLabel,qty}
+
 function parsePrice(p){const m=String(p).match(/\d+/);return m?parseInt(m[0],10):0}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
@@ -96,17 +98,37 @@ function renderCartLines(){
     form.style.display="none"; return;
   }
   form.style.display="block";
-  box.innerHTML = Array.from(cart.values()).map(l=>`
-    <div class="line">
-      <div class="name"><b>${esc(l.name)}</b><small>${l.unitPrice} ج.م × ${l.qty}</small></div>
-      <div class="qty">
-        <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
-        <span>${l.qty}</span>
-        <button onclick="decItem('${encodeURIComponent(l.name)}')">−</button>
+  
+  let html = "";
+  for(const l of cart.values()){
+    // التصميم الجديد للبطاقة: بيفصل الاسم فوق، والتفاصيل تحت عشان مفيش حاجة تضغط التانية
+    html += `
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;">
+      <div style="font-weight: bold; color: var(--primary); font-size: 1.1rem; margin-bottom: 0.75rem; text-align: right;">
+        ${esc(l.name)}
       </div>
-      <div class="lp">${l.unitPrice*l.qty} ج.م</div>
-      <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
-    </div>`).join("");
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        
+        <div style="font-size: 0.85rem; color: var(--muted);">
+          السعر: ${l.unitPrice} ج
+        </div>
+        
+        <div class="qty" style="display: flex; align-items: center; gap: 0.5rem; border: 1px solid rgba(217,179,90,.6); border-radius: 9999px; padding: 0.2rem 0.5rem;">
+          <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
+          <span>${l.qty}</span>
+          <button onclick="decItem('${encodeURIComponent(l.name)}')">−</button>
+        </div>
+        
+        <div style="font-weight: bold; color: var(--fg);">
+          فرعي: ${l.unitPrice * l.qty} ج
+        </div>
+        
+        <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
+      </div>
+    </div>`;
+  }
+  box.innerHTML = html;
 }
 
 function openCart(){document.getElementById("cart-modal").classList.add("open");updateCartUI()}
