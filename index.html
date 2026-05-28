@@ -18,8 +18,10 @@
 <meta name="apple-mobile-web-app-title" content="مارينا فيش">
 <link rel="apple-touch-icon" href="icon-192x192.png">
 
-<!-- html2canvas لتحويل الفاتورة إلى صورة -->
+<!-- html2canvas -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- html2pdf (اختياري لتحويل PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -58,11 +60,12 @@
   <span class="badge"><span id="fab-sub">0</span> ج.م</span>
 </button>
 
+<!-- نافذة السلة -->
 <div class="modal" id="cart-modal" onclick="if(event.target===this)closeCart()">
   <div class="modal-content" style="position:relative">
     <button class="modal-close" onclick="closeCart()">✕</button>
     <h2>🧾 الفاتورة</h2>
-    <p class="modal-desc">راجع طلبك ثم أكمل البيانات لإرسال الطلب للمطبخ</p>
+    <p class="modal-desc">راجع طلبك ثم أكمل البيانات</p>
     <div id="cart-lines"></div>
     <div id="cart-form" style="display:none">
       <div class="form-group">
@@ -97,13 +100,32 @@
         <div class="row total"><span>🇪🇬 الإجمالي</span><span><span id="t-total">0</span> ج.م</span></div>
       </div>
       
-      <button class="send-wa" onclick="sendWhatsApp()">💬 إرسال الطلب عبر واتساب</button>
+      <button class="create-invoice-btn" onclick="createInvoiceImage()">📸 إنشاء صورة الفاتورة</button>
     </div>
   </div>
 </div>
 
-<!-- عنصر خفي لتحويل الفاتورة إلى صورة (يظهر فقط عند التصوير) -->
-<div id="invoice-capture" style="position: fixed; left: -9999px; top: 0; background: white; width: 700px; padding: 20px; font-family: 'Cairo', sans-serif; direction: rtl; color: #1a1a2e; box-sizing: border-box;">
+<!-- نافذة معاينة الصورة قبل المشاركة -->
+<div class="modal" id="preview-modal" onclick="if(event.target===this)closePreview()">
+  <div class="modal-content preview-modal-content">
+    <button class="modal-close" onclick="closePreview()">✕</button>
+    <h2>📸 معاينة الفاتورة</h2>
+    <p class="modal-desc">الفاتورة جاهزة للمشاركة - راجعها ثم أرسلها للمطعم</p>
+    
+    <div id="invoice-preview-container" style="text-align: center; margin: 15px 0; background: #fff; padding: 10px; border-radius: 12px;">
+      <img id="invoice-preview-img" src="" alt="الفاتورة" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button class="share-wa-btn" onclick="shareToWhatsApp()">💬 مشاركة عبر واتساب</button>
+      <button class="download-btn" onclick="downloadInvoiceImage()">📥 تحميل الصورة</button>
+    </div>
+    <button class="cancel-btn" onclick="closePreview()">إلغاء</button>
+  </div>
+</div>
+
+<!-- عنصر خفي لإنشاء الصورة -->
+<div id="invoice-capture" style="position: fixed; left: -9999px; top: 0; background: white; width: 650px; padding: 20px; font-family: 'Cairo', sans-serif; direction: rtl; color: #1a1a2e; box-sizing: border-box; border-radius: 16px;">
   <div id="capture-content"></div>
 </div>
 
@@ -120,6 +142,339 @@
       navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
     });
   }
+  
+  let currentInvoiceImage = null;
+  let currentInvoiceNumber = null;
+  let currentInvoiceData = null;
+  
+  // إنشاء صورة الفاتورة
+  async function createInvoiceImage() {
+    // التحقق من السلة
+    if (typeof cart === 'undefined' || cart.size === 0) {
+      alert("❌ السلة فارغة! أضف بعض الأصناف أولاً.");
+      return;
+    }
+    
+    // جلب بيانات العميل
+    const name = document.getElementById("cust-name").value.trim();
+    const phone = document.getElementById("cust-phone").value.trim();
+    const address = document.getElementById("cust-addr").value.trim();
+    const pickupTime = document.getElementById("pickup-time").value.trim();
+    const notes = document.getElementById("cust-notes").value.trim();
+    
+    // التحقق من البيانات الإلزامية
+    if (!name) {
+      alert("❌ الرجاء إدخال الاسم");
+      document.getElementById("cust-name").focus();
+      return;
+    }
+    if (!phone) {
+      alert("❌ الرجاء إدخال رقم الهاتف");
+      document.getElementById("cust-phone").focus();
+      return;
+    }
+    if (!address) {
+      alert("❌ الرجاء إدخال العنوان بالتفصيل");
+      document.getElementById("cust-addr").focus();
+      return;
+    }
+    
+    // حساب المجاميع
+    let subTotal = 0;
+    let itemsArray = [];
+    
+    for (const l of cart.values()) {
+      const itemTotal = l.unitPrice * l.qty;
+      subTotal += itemTotal;
+      itemsArray.push({
+        name: l.name,
+        unitPrice: l.unitPrice,
+        qty: l.qty,
+        total: itemTotal
+      });
+    }
+    
+    const deliveryFee = typeof DELIVERY_FEE !== 'undefined' ? DELIVERY_FEE : 50;
+    const totalAmount = subTotal + deliveryFee;
+    
+    // الحصول على رقم الفاتورة
+    if (typeof getInvoiceNumber === 'function') {
+      currentInvoiceNumber = getInvoiceNumber();
+    } else {
+      currentInvoiceNumber = 701;
+    }
+    
+    // التاريخ
+    const now = new Date();
+    const invoiceDate = now.toLocaleString('ar-EG', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    // حفظ بيانات الفاتورة للمشاركة
+    currentInvoiceData = {
+      name, phone, address, pickupTime, notes,
+      itemsArray, subTotal, deliveryFee, totalAmount,
+      invoiceNumber: currentInvoiceNumber,
+      invoiceDate
+    };
+    
+    // بناء HTML الفاتورة
+    let itemsHtml = '';
+    for (let i = 0; i < itemsArray.length; i++) {
+      const item = itemsArray[i];
+      itemsHtml += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+          <div style="flex: 2;">
+            <div style="font-weight: bold; font-size: 14px; color: #1a1a2e;">${escapeHtml(item.name)}</div>
+            <div style="font-size: 11px; color: #888;">${item.unitPrice} ج.م × ${item.qty}</div>
+          </div>
+          <div style="font-weight: bold; font-size: 14px; color: #c9a03d;">${item.total} ج.م</div>
+        </div>
+      `;
+    }
+    
+    const invoiceHTML = `
+      <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #0d1424, #1a1a2e); color: white; padding: 20px; text-align: center;">
+          <div style="font-size: 28px; font-weight: bold; color: #c9a03d;">🐟 مارينا فيش</div>
+          <div style="font-size: 12px; opacity: 0.8;">MARINA FISH - منذ 1995</div>
+          <div style="margin-top: 12px;">
+            <span style="background: #c9a03d; color: #0d1424; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold;">فاتورة #${currentInvoiceNumber}</span>
+          </div>
+          <div style="font-size: 11px; opacity: 0.7; margin-top: 8px;">📅 ${invoiceDate}</div>
+        </div>
+        
+        <div style="padding: 20px;">
+          <div style="margin-bottom: 20px;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 10px;">🍽️ الأصناف المطلوبة</div>
+            ${itemsHtml}
+          </div>
+          
+          <div style="background: #f8f8f8; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #666;">المجموع الفرعي</span>
+              <span style="font-weight: bold;">${subTotal} ج.م</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #666;">🛵 خدمة التوصيل</span>
+              <span style="font-weight: bold;">${deliveryFee} ج.م</span>
+            </div>
+            <div style="border-top: 1px solid #ddd; margin: 10px 0;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+              <span>🇪🇬 الإجمالي</span>
+              <span style="color: #c9a03d;">${totalAmount} ج.م</span>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 10px;">👤 بيانات العميل</div>
+            <div style="background: #f8f8f8; padding: 12px; border-radius: 10px; font-size: 13px;">
+              <div><span style="color: #666;">📛 الاسم:</span> ${escapeHtml(name)}</div>
+              <div><span style="color: #666;">📞 الهاتف:</span> ${escapeHtml(phone)}</div>
+              <div><span style="color: #666;">📍 العنوان:</span> ${escapeHtml(address)}</div>
+              ${pickupTime ? `<div><span style="color: #666;">⏰ وقت الاستلام:</span> ${escapeHtml(pickupTime)}</div>` : ''}
+              ${notes ? `<div><span style="color: #666;">📝 ملاحظات:</span> ${escapeHtml(notes)}</div>` : ''}
+            </div>
+          </div>
+        </div>
+        
+        <div style="background: #f0f0f0; padding: 12px; text-align: center; font-size: 11px; color: #888;">
+          ✨ شكراً لتسوقكم مع مارينا فيش ✨
+        </div>
+      </div>
+    `;
+    
+    // وضع المحتوى في عنصر التصوير
+    const captureContainer = document.getElementById('capture-content');
+    if (captureContainer) {
+      captureContainer.innerHTML = invoiceHTML;
+    }
+    
+    // إظهار عنصر التصوير
+    const captureElem = document.getElementById('invoice-capture');
+    captureElem.style.left = '0';
+    captureElem.style.position = 'fixed';
+    captureElem.style.top = '0';
+    captureElem.style.zIndex = '9999';
+    
+    // إظهار رسالة انتظار
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = '⏳ جاري إنشاء الصورة...';
+    btn.disabled = true;
+    
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    try {
+      const canvas = await html2canvas(captureElem, {
+        scale: 2.5,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+        windowWidth: captureElem.scrollWidth,
+        windowHeight: captureElem.scrollHeight
+      });
+      
+      currentInvoiceImage = canvas.toDataURL('image/png');
+      
+      // عرض الصورة في نافذة المعاينة
+      const previewImg = document.getElementById('invoice-preview-img');
+      previewImg.src = currentInvoiceImage;
+      
+      // إخفاء نافذة السلة وفتح نافذة المعاينة
+      closeCart();
+      openPreview();
+      
+      // زيادة رقم الفاتورة
+      if (typeof incrementInvoiceNumber === 'function') {
+        incrementInvoiceNumber();
+      }
+      
+    } catch(error) {
+      console.error('خطأ:', error);
+      alert('حدث خطأ في إنشاء الصورة. حاول مرة أخرى.');
+    } finally {
+      btn.innerText = originalText;
+      btn.disabled = false;
+      captureElem.style.left = '-9999px';
+    }
+  }
+  
+  function openPreview() {
+    const modal = document.getElementById('preview-modal');
+    if (modal) modal.classList.add('open');
+  }
+  
+  function closePreview() {
+    const modal = document.getElementById('preview-modal');
+    if (modal) modal.classList.remove('open');
+  }
+  
+  function downloadInvoiceImage() {
+    if (currentInvoiceImage) {
+      const link = document.createElement('a');
+      link.download = `فاتورة_مارينا_فيش_${currentInvoiceNumber}.png`;
+      link.href = currentInvoiceImage;
+      link.click();
+    } else {
+      alert('لا توجد صورة للتحميل');
+    }
+  }
+  
+  function shareToWhatsApp() {
+    if (!currentInvoiceImage || !currentInvoiceData) {
+      alert('الرجاء إنشاء الصورة أولاً');
+      return;
+    }
+    
+    // تحويل الصورة من base64 إلى blob
+    fetch(currentInvoiceImage)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], `invoice_${currentInvoiceNumber}.png`, { type: 'image/png' });
+        const whatsappNumber = typeof WHATSAPP_NUMBER !== 'undefined' ? WHATSAPP_NUMBER : '01040440885';
+        
+        // محاولة فتح واتساب مع الصورة (على الموبايل)
+        // ملاحظة: المتصفحات الحديثة لا تسمح بإرفاق الملفات تلقائياً
+        // الحل: فتح واتساب مع رابط تحميل الصورة
+        
+        const message = `🏝️ *مارينا فيش*\n📄 فاتورة رقم: #${currentInvoiceNumber}\n💰 الإجمالي: ${currentInvoiceData.totalAmount} ج.م\n👤 ${currentInvoiceData.name}\n📞 ${currentInvoiceData.phone}\n\n📸 تم إرفاق صورة الفاتورة بالطلب`;
+        
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        
+        alert(`✅ تم فتح واتساب\n📍 الرجاء إرفاق الصورة (فاتورة_مارينا_فيش_${currentInvoiceNumber}.png) من معرض الصور الخاص بك`);
+        
+        // تحميل الصورة لتكون في المعرض
+        downloadInvoiceImage();
+        
+        // إغلاق النافذة بعد 2 ثانية
+        setTimeout(() => {
+          closePreview();
+        }, 2000);
+      })
+      .catch(err => {
+        console.error(err);
+        alert('حدث خطأ في المشاركة');
+      });
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
 </script>
+
+<style>
+  /* ستايل إضافي للأزرار الجديدة */
+  .create-invoice-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #c9a03d, #b8923f);
+    color: #0d1424;
+    border: none;
+    padding: 12px;
+    border-radius: 40px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .create-invoice-btn:hover {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+  
+  .share-wa-btn {
+    flex: 1;
+    background: #25D366;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .download-btn {
+    flex: 1;
+    background: linear-gradient(135deg, #c9a03d, #b8923f);
+    color: #0d1424;
+    border: none;
+    padding: 12px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .cancel-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #c9a03d;
+    color: #c9a03d;
+    padding: 10px;
+    border-radius: 40px;
+    font-size: 14px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  
+  .preview-modal-content {
+    max-width: 400px !important;
+    text-align: center;
+  }
+</style>
 </body>
 </html>
