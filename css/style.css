@@ -67,8 +67,11 @@
   .modal h2{color:var(--primary);font-family:'Cairo';font-size:1.5rem;font-weight:700;text-align:right}
   .modal-desc{font-size:.85rem;color:var(--muted);text-align:right;margin:.25rem 0 1rem}
   .line{display:flex;align-items:center;gap:.5rem;border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem}
-  .line .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .line .name b{display:block;font-weight:600}
+  
+  /* التعديل هنا: إزالة الـ overflow وإضافة خصائص تسمح بظهور الاسم كاملاً */
+  .line .name{flex:1;min-width:0}
+  .line .name b{display:block;font-weight:700;color:var(--primary);white-space:normal;word-break:break-word;margin-bottom:4px}
+  
   .line .name small{color:var(--muted);font-size:.75rem}
   .line .lp{font-weight:700;color:var(--primary);min-width:4rem;text-align:left}
   .line .rm{color:var(--muted);padding:.25rem}
