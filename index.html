@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مارينا فيش — أرقى المأكولات البحرية</title>
+<meta name="description" content="منيو مطعم مارينا فيش — صواني، طواجن، ووجبات بحرية طازجة يومياً">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-bg"><img src="images/hero-bg.jpeg" alt="مأكولات بحرية طازجة"></div>
+  <div class="top-brand">
+    <div class="name">MARINA FISH</div>
+    <div class="since">منذ ١٩٩٥</div>
+  </div>
+  <div class="hero-content">
+    <div class="tag">★ منذ ١٩٩٥ ★</div>
+    <h1>طازج من البحر<br><span>إلى مائدتك</span></h1>
+    <p>أرقى أطباق المأكولات البحرية. تُحضّر يومياً من أجود الأسماك الطازجة</p>
+    <div class="hero-actions">
+      <a href="#menu" class="btn-gold">تصفّح المنيو</a>
+      <a href="tel:+201040440805" class="btn-outline">📞 اتصل للحجز</a>
+    </div>
+  </div>
+  <a href="#menu" class="scroll-down bounce" aria-label="انزل للمنيو">⌄</a>
+</section>
+
+<nav class="nav" id="menu">
+  <div class="nav-scroll"><ul id="nav-list"></ul></div>
+</nav>
+
+<main id="menu-main"></main>
+
+<footer>
+  <div class="brand">مارينا فيش 🐟</div>
+  <p>طازج كل يوم — من البحر إلى مائدتك</p>
+  <p style="font-size:.75rem;margin-top:.5rem">© <span id="year"></span> Marina Fish</p>
+</footer>
+
+<button class="cart-fab" id="cart-fab" style="display:none" onclick="openCart()">
+  🛒 <span>عرض الطلب (<span id="fab-qty">0</span>)</span>
+  <span class="badge"><span id="fab-sub">0</span> ج.م</span>
+</button>
+
+<div class="modal" id="cart-modal" onclick="if(event.target===this)closeCart()">
+  <div class="modal-content" style="position:relative">
+    <button class="modal-close" onclick="closeCart()">✕</button>
+    <h2>طلبك</h2>
+    <p class="modal-desc">راجع الفاتورة ثم أرسلها للمحل عبر واتساب لتأكيد الطلب</p>
+    <div id="cart-lines"></div>
+    <div id="cart-form" style="display:none">
+      <input type="text" id="cust-name" placeholder="الاسم">
+      <input type="tel" id="cust-phone" placeholder="رقم الموبايل">
+      <input type="text" id="cust-addr" placeholder="العنوان بالتفصيل">
+      <div class="totals">
+        <div class="row"><span>المجموع الفرعي</span><span><span id="t-sub">0</span> ج.م</span></div>
+        <div class="row"><span>🛵 خدمة التوصيل</span><span><span id="t-del">0</span> ج.م</span></div>
+        <div class="hr"></div>
+        <div class="row total"><span>الإجمالي</span><span><span id="t-total">0</span> ج.م</span></div>
+        <p class="note">* يُضاف رسم التوصيل تلقائياً. التوصيل لمناطق الخدمة فقط.</p>
+      </div>
+      <button class="send-wa" onclick="sendWhatsApp()">💬 إرسال الطلب عبر واتساب</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
