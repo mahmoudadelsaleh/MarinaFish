@@ -1,21 +1,35 @@
 // ======== منطق الموقع ========
-// في أعلى ملف app.js بعد تعريف const cart
-console.log("✅ app.js loaded, cart ready");
-window.cart = cart; // جعل cart متاح globally للتسهيل
 const sections = window.__SECTIONS__ || [];
-const cart = new Map(); // name -> {name,unitPrice,priceLabel,qty}
+const cart = new Map();
 
-function parsePrice(p){const m=String(p).match(/\d+/);return m?parseInt(m[0],10):0}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function parsePrice(p){
+  const m = String(p).match(/\d+/);
+  return m ? parseInt(m[0],10) : 0;
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
 
 function renderNav(){
-  document.getElementById("nav-list").innerHTML = sections.map(s=>
-    `<li><a href="#${s.id}"><span>${s.icon}</span>${esc(s.title)}</a></li>`).join("");
+  const navList = document.getElementById("nav-list");
+  if(!navList) return;
+  navList.innerHTML = sections.map(s =>
+    `<li><a href="#${s.id}"><span>${s.icon}</span>${esc(s.title)}</a></li>`
+  ).join("");
 }
 
 function renderMenu(){
   const main = document.getElementById("menu-main");
-  main.innerHTML = sections.map((s,idx)=>`
+  if(!main) return;
+  
+  main.innerHTML = sections.map((s, idx) => `
     <section class="section" id="${s.id}">
       <div class="section-head">
         <div class="icon">${s.icon}</div>
@@ -24,22 +38,25 @@ function renderMenu(){
         <div class="divider"></div>
       </div>
       <div class="grid">
-        ${s.items.map(it=>`
+        ${s.items.map(it => `
           <article class="card">
             <div class="card-top">
               <h3>${esc(it.name)}</h3>
               <span class="price">${esc(it.price)} ج.م</span>
             </div>
-            ${it.desc?`<p class="desc">${esc(it.desc)}</p>`:""}
+            ${it.desc ? `<p class="desc">${esc(it.desc)}</p>` : ""}
             <div class="card-actions" data-slot="${encodeURIComponent(it.name)}"></div>
-          </article>`).join("")}
+          </article>
+        `).join("")}
       </div>
-    </section>`).join("");
+    </section>
+  `).join("");
+  
   refreshAllSlots();
 }
 
 function refreshAllSlots(){
-  document.querySelectorAll("[data-slot]").forEach(slot=>{
+  document.querySelectorAll("[data-slot]").forEach(slot => {
     const name = decodeURIComponent(slot.getAttribute("data-slot"));
     const line = cart.get(name);
     if(line){
@@ -55,54 +72,95 @@ function refreshAllSlots(){
 }
 
 function findItem(name){
-  for(const s of sections) for(const it of s.items) if(it.name===name) return it;
+  for(const s of sections){
+    for(const it of s.items){
+      if(it.name === name) return it;
+    }
+  }
   return null;
 }
 
 function addItem(encName){
   const name = decodeURIComponent(encName);
-  const it = findItem(name); if(!it) return;
+  const it = findItem(name);
+  if(!it) return;
+  
   const cur = cart.get(name);
-  if(cur) cur.qty++;
-  else cart.set(name,{name,unitPrice:parsePrice(it.price),priceLabel:it.price,qty:1});
-  refreshAllSlots(); updateCartUI();
+  if(cur){
+    cur.qty++;
+  } else {
+    cart.set(name, {
+      name: name,
+      unitPrice: parsePrice(it.price),
+      priceLabel: it.price,
+      qty: 1
+    });
+  }
+  refreshAllSlots();
+  updateCartUI();
 }
+
 function decItem(encName){
   const name = decodeURIComponent(encName);
-  const cur = cart.get(name); if(!cur) return;
-  cur.qty--; if(cur.qty<=0) cart.delete(name);
-  refreshAllSlots(); updateCartUI();
+  const cur = cart.get(name);
+  if(!cur) return;
+  
+  cur.qty--;
+  if(cur.qty <= 0) cart.delete(name);
+  refreshAllSlots();
+  updateCartUI();
 }
+
 function removeItem(encName){
   cart.delete(decodeURIComponent(encName));
-  refreshAllSlots(); updateCartUI();
+  refreshAllSlots();
+  updateCartUI();
 }
 
 function totals(){
-  let sub=0,qty=0; for(const l of cart.values()){sub+=l.unitPrice*l.qty;qty+=l.qty}
-  return {sub,qty,total: sub + (cart.size>0?DELIVERY_FEE:0)};
+  let sub = 0;
+  let qty = 0;
+  for(const l of cart.values()){
+    sub += l.unitPrice * l.qty;
+    qty += l.qty;
+  }
+  const delivery = cart.size > 0 ? (typeof DELIVERY_FEE !== 'undefined' ? DELIVERY_FEE : 50) : 0;
+  return { sub, qty, total: sub + delivery };
 }
 
 function updateCartUI(){
-  const {sub,qty,total} = totals();
+  const {sub, qty, total} = totals();
   const fab = document.getElementById("cart-fab");
-  if(qty>0){fab.style.display="inline-flex";document.getElementById("fab-qty").textContent=qty;document.getElementById("fab-sub").textContent=sub}
-  else fab.style.display="none";
+  if(qty > 0){
+    fab.style.display = "inline-flex";
+    document.getElementById("fab-qty").textContent = qty;
+    document.getElementById("fab-sub").textContent = sub;
+  } else {
+    fab.style.display = "none";
+  }
   renderCartLines();
-  document.getElementById("t-sub").textContent=sub;
-  document.getElementById("t-del").textContent=cart.size>0?DELIVERY_FEE:0;
-  document.getElementById("t-total").textContent=total;
+  
+  const tSub = document.getElementById("t-sub");
+  const tDel = document.getElementById("t-del");
+  const tTotal = document.getElementById("t-total");
+  if(tSub) tSub.textContent = sub;
+  if(tDel) tDel.textContent = cart.size > 0 ? (typeof DELIVERY_FEE !== 'undefined' ? DELIVERY_FEE : 50) : 0;
+  if(tTotal) tTotal.textContent = total;
 }
 
 function renderCartLines(){
   const box = document.getElementById("cart-lines");
   const form = document.getElementById("cart-form");
+  
+  if(!box) return;
+  
   if(cart.size === 0){
     box.innerHTML = `<p style="text-align:center;color:var(--muted);padding:2rem 0">🛒 سلة الطلب فارغة</p>`;
-    form.style.display = "none";
+    if(form) form.style.display = "none";
     return;
   }
-  form.style.display = "block";
+  
+  if(form) form.style.display = "block";
   
   let html = '';
   for(const l of cart.values()){
@@ -126,8 +184,26 @@ function renderCartLines(){
   box.innerHTML = html;
 }
 
-function openCart(){document.getElementById("cart-modal").classList.add("open");updateCartUI()}
-function closeCart(){document.getElementById("cart-modal").classList.remove("open")}
+function openCart(){
+  const modal = document.getElementById("cart-modal");
+  if(modal) modal.classList.add("open");
+  updateCartUI();
+}
 
-document.getElementById("year").textContent = new Date().getFullYear();
-renderNav(); renderMenu(); updateCartUI();
+function closeCart(){
+  const modal = document.getElementById("cart-modal");
+  if(modal) modal.classList.remove("open");
+}
+
+// تشغيل الموقع عند تحميل الصفحة
+document.addEventListener("DOMContentLoaded", function() {
+  const yearSpan = document.getElementById("year");
+  if(yearSpan) yearSpan.textContent = new Date().getFullYear();
+  
+  renderNav();
+  renderMenu();
+  updateCartUI();
+  
+  console.log("✅ تم تحميل الموقع بنجاح");
+  console.log("عدد الأقسام:", sections.length);
+});
