@@ -1,19 +1,20 @@
-// ======== إعدادات وإرسال الواتساب مع صورة ========
+// ======== نظام الفاتورة كصورة وإرسالها للواتساب ========
 
 async function sendWhatsApp() {
+  // التحقق من السلة
   if (typeof cart === 'undefined' || cart.size === 0) {
     alert("❌ السلة فارغة! أضف بعض الأصناف أولاً.");
     return;
   }
   
-  // جلب البيانات من الحقول
+  // جلب بيانات العميل
   const name = document.getElementById("cust-name").value.trim();
   const phone = document.getElementById("cust-phone").value.trim();
   const address = document.getElementById("cust-addr").value.trim();
   const pickupTime = document.getElementById("pickup-time").value.trim();
   const notes = document.getElementById("cust-notes").value.trim();
   
-  // التحقق من البيانات الأساسية
+  // التحقق من البيانات الإلزامية
   if (!name) {
     alert("❌ الرجاء إدخال الاسم");
     document.getElementById("cust-name").focus();
@@ -32,23 +33,17 @@ async function sendWhatsApp() {
   
   // حساب المجاميع
   let subTotal = 0;
-  let itemsHtml = '';
-  let itemsText = '';
-  let counter = 1;
+  let itemsArray = [];
   
   for (const l of cart.values()) {
     const itemTotal = l.unitPrice * l.qty;
     subTotal += itemTotal;
-    itemsHtml += `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px dashed #ddd;">
-        <div style="flex: 2;">
-          <div style="font-weight: bold; color: #c9a03d;">${esc(l.name)}</div>
-          <div style="font-size: 11px; color: #666;">${l.unitPrice} ج.م × ${l.qty}</div>
-        </div>
-        <div style="font-weight: bold; color: #c9a03d;">${itemTotal} ج.م</div>
-      </div>
-    `;
-    itemsText += `${l.name} (${l.unitPrice}ج.م × ${l.qty} = ${itemTotal}ج.م)\n`;
+    itemsArray.push({
+      name: l.name,
+      unitPrice: l.unitPrice,
+      qty: l.qty,
+      total: itemTotal
+    });
   }
   
   const deliveryFee = typeof DELIVERY_FEE !== 'undefined' ? DELIVERY_FEE : 50;
@@ -60,139 +55,167 @@ async function sendWhatsApp() {
     invoiceNum = getInvoiceNumber();
   }
   
-  // إنشاء التاريخ
+  // التاريخ
   const now = new Date();
-  const invoiceDate = now.toLocaleString('ar-EG');
+  const invoiceDate = now.toLocaleString('ar-EG', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
   
-  // إنشاء محتوى الفاتورة للصورة
+  // بناء HTML الفاتورة للصورة
+  let itemsHtml = '';
+  for (let i = 0; i < itemsArray.length; i++) {
+    const item = itemsArray[i];
+    itemsHtml += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0e0e0;">
+        <div style="flex: 2;">
+          <div style="font-weight: bold; font-size: 14px; color: #1a1a2e;">${escapeHtml(item.name)}</div>
+          <div style="font-size: 11px; color: #888;">${item.unitPrice} ج.م × ${item.qty}</div>
+        </div>
+        <div style="font-weight: bold; font-size: 14px; color: #c9a03d;">${item.total} ج.م</div>
+      </div>
+    `;
+  }
+  
   const invoiceHTML = `
-    <div style="font-family: 'Cairo', 'Amiri', sans-serif; direction: rtl; background: white; padding: 12px; border-radius: 12px; width: 100%; box-sizing: border-box;">
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #c9a03d; padding-bottom: 10px;">
-        <div style="font-size: 22px; font-weight: bold; color: #c9a03d;">🐟 مارينا فيش</div>
-        <div style="font-size: 11px; color: #888;">MARINA FISH</div>
-        <div style="font-size: 12px; margin-top: 5px;">
-          <span style="background: #c9a03d; color: #1a1a2e; padding: 2px 8px; border-radius: 20px; font-weight: bold;">فاتورة #${invoiceNum}</span>
+    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+      <!-- الهيدر -->
+      <div style="background: linear-gradient(135deg, #0d1424, #1a1a2e); color: white; padding: 20px; text-align: center;">
+        <div style="font-size: 28px; font-weight: bold; color: #c9a03d;">🐟 مارينا فيش</div>
+        <div style="font-size: 12px; opacity: 0.8;">MARINA FISH - منذ 1995</div>
+        <div style="margin-top: 12px;">
+          <span style="background: #c9a03d; color: #0d1424; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold;">فاتورة #${invoiceNum}</span>
         </div>
-        <div style="font-size: 10px; color: #888; margin-top: 5px;">📅 ${invoiceDate}</div>
+        <div style="font-size: 11px; opacity: 0.7; margin-top: 8px;">📅 ${invoiceDate}</div>
       </div>
       
-      <!-- Items -->
-      <div style="margin-bottom: 15px;">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 8px;">🍽️ الأصناف المطلوبة</div>
-        ${itemsHtml}
+      <!-- المحتوى -->
+      <div style="padding: 20px;">
+        <!-- الأصناف -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 10px;">🍽️ الأصناف المطلوبة</div>
+          ${itemsHtml}
+        </div>
+        
+        <!-- الإجماليات -->
+        <div style="background: #f8f8f8; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #666;">المجموع الفرعي</span>
+            <span style="font-weight: bold;">${subTotal} ج.م</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #666;">🛵 خدمة التوصيل</span>
+            <span style="font-weight: bold;">${deliveryFee} ج.م</span>
+          </div>
+          <div style="border-top: 1px solid #ddd; margin: 10px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+            <span>🇪🇬 الإجمالي</span>
+            <span style="color: #c9a03d;">${totalAmount} ج.م</span>
+          </div>
+        </div>
+        
+        <!-- بيانات العميل -->
+        <div style="margin-bottom: 15px;">
+          <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 10px;">👤 بيانات العميل</div>
+          <div style="background: #f8f8f8; padding: 12px; border-radius: 10px; font-size: 13px;">
+            <div><span style="color: #666;">📛 الاسم:</span> ${escapeHtml(name)}</div>
+            <div><span style="color: #666;">📞 الهاتف:</span> ${escapeHtml(phone)}</div>
+            <div><span style="color: #666;">📍 العنوان:</span> ${escapeHtml(address)}</div>
+            ${pickupTime ? `<div><span style="color: #666;">⏰ وقت الاستلام:</span> ${escapeHtml(pickupTime)}</div>` : ''}
+            ${notes ? `<div><span style="color: #666;">📝 ملاحظات:</span> ${escapeHtml(notes)}</div>` : ''}
+          </div>
+        </div>
       </div>
       
-      <!-- Totals -->
-      <div style="background: #f5f5f5; padding: 12px; border-radius: 10px; margin-bottom: 15px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-          <span style="color: #666;">المجموع الفرعي</span>
-          <span>${subTotal} ج.م</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-          <span style="color: #666;">🛵 خدمة التوصيل</span>
-          <span>${deliveryFee} ج.م</span>
-        </div>
-        <div style="border-top: 1px solid #ddd; margin: 8px 0;"></div>
-        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
-          <span>🇪🇬 الإجمالي</span>
-          <span style="color: #c9a03d;">${totalAmount} ج.م</span>
-        </div>
-      </div>
-      
-      <!-- Customer Info -->
-      <div style="margin-bottom: 15px;">
-        <div style="font-weight: bold; margin-bottom: 8px; color: #1a1a2e; border-right: 3px solid #c9a03d; padding-right: 8px;">👤 بيانات العميل</div>
-        <div style="background: #fafafa; padding: 10px; border-radius: 8px; font-size: 12px;">
-          <div><span style="color: #666;">📛 الاسم:</span> ${esc(name)}</div>
-          <div><span style="color: #666;">📞 الهاتف:</span> ${esc(phone)}</div>
-          <div><span style="color: #666;">📍 العنوان:</span> ${esc(address)}</div>
-          ${pickupTime ? `<div><span style="color: #666;">⏰ وقت الاستلام:</span> ${esc(pickupTime)}</div>` : ''}
-          ${notes ? `<div><span style="color: #666;">📝 ملاحظات:</span> ${esc(notes)}</div>` : ''}
-        </div>
-      </div>
-      
-      <!-- Footer -->
-      <div style="text-align: center; font-size: 10px; color: #aaa; border-top: 1px solid #eee; padding-top: 10px;">
+      <!-- الفوتر -->
+      <div style="background: #f0f0f0; padding: 12px; text-align: center; font-size: 11px; color: #888;">
         ✨ شكراً لتسوقكم مع مارينا فيش ✨
       </div>
     </div>
   `;
   
-  // وضع المحتوى في العنصر الخفي
-  const previewContainer = document.getElementById('invoice-content');
-  if (previewContainer) {
-    previewContainer.innerHTML = invoiceHTML;
+  // وضع المحتوى في عنصر التصوير
+  const captureContainer = document.getElementById('capture-content');
+  if (captureContainer) {
+    captureContainer.innerHTML = invoiceHTML;
   }
   
-  // انتظار قليلاً ثم تحويل إلى صورة
-  const previewElem = document.getElementById('invoice-preview');
+  // إظهار العنصر مؤقتاً للتصوير
+  const captureElem = document.getElementById('invoice-capture');
+  captureElem.style.left = '0';
+  captureElem.style.opacity = '1';
+  captureElem.style.position = 'fixed';
+  captureElem.style.top = '0';
+  captureElem.style.zIndex = '9999';
   
-  // إظهار العنصر مؤقتاً لأخذ الصورة (مخفي بصرياً ولكن موجود في DOM)
-  previewElem.style.opacity = '0';
-  previewElem.style.position = 'fixed';
-  previewElem.style.left = '0';
-  previewElem.style.top = '0';
-  previewElem.style.pointerEvents = 'none';
-  
-  // إضافة بعض الوقت للتأكد من تحميل الخطوط
-  await new Promise(resolve => setTimeout(resolve, 100));
+  // انتظار التحميل
+  await new Promise(resolve => setTimeout(resolve, 200));
   
   try {
     // تحويل إلى صورة
-    const canvas = await html2canvas(previewElem, {
-      scale: 2,  // دقة عالية
+    const canvas = await html2canvas(captureElem, {
+      scale: 2.5,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      windowWidth: captureElem.scrollWidth,
+      windowHeight: captureElem.scrollHeight
     });
     
-    // تحويل canvas إلى blob (ملف صورة)
+    // تحويل canvas إلى blob
     canvas.toBlob(async (blob) => {
       // إنشاء ملف الصورة
       const imageFile = new File([blob], `invoice_${invoiceNum}.png`, { type: 'image/png' });
+      const imageUrl = URL.createObjectURL(blob);
+      
+      // حفظ الصورة على جهاز العميل
+      const downloadLink = document.createElement('a');
+      downloadLink.href = imageUrl;
+      downloadLink.download = `فاتورة_مارينا_فيش_${invoiceNum}.png`;
+      downloadLink.click();
       
       // زيادة رقم الفاتورة
       if (typeof incrementInvoiceNumber === 'function') {
         incrementInvoiceNumber();
       }
       
-      // محاولة إرسال عبر واتساب (نص + صورة)
-      // ملاحظة: واتساب ويب لا يدعم إرسال الصور مباشرة من الرابط
-      // لذلك سنرسل النص مع رابط تحميل الصورة، أو نفتح واتساب مع النص
+      // فتح واتساب مع الصورة (على الموبايل)
+      // ملاحظة: واتساب ويب لا يدعم إرفاق الصور تلقائياً
+      // الحل: فتح واتساب مع رابط الصورة أو استخدام واتساب API على الموبايل
       
-      const messageText = `🏝️ *مارينا فيش*\n📄 فاتورة رقم: #${invoiceNum}\n💰 الإجمالي: ${totalAmount} ج.م\n👤 ${name}\n📞 ${phone}\n\n✨ تم إنشاء فاتورة الطلب - يمكنك حفظ الصورة المرفقة مع الطلب ✨`;
+      const messageText = `🏝️ *مارينا فيش* 🏝️\n📄 فاتورة رقم: #${invoiceNum}\n💰 الإجمالي: ${totalAmount} ج.م\n👤 ${name}\n📞 ${phone}\n\n📸 تم إرفاق صورة الفاتورة بالطلب\n✨ شكراً لثقتكم ✨`;
       
       const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(messageText)}`;
       window.open(whatsappUrl, "_blank");
       
-      // عرض رابط تحميل الصورة للعميل
-      const imageUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement('a');
-      downloadLink.href = imageUrl;
-      downloadLink.download = `فاتورة_مارينا_فيش_${invoiceNum}.png`;
-      downloadLink.click();
+      // عرض تنبيه للعميل
+      setTimeout(() => {
+        alert(`✅ تم إنشاء فاتورة رقم #${invoiceNum}\n\n📸 تم حفظ صورة الفاتورة على جهازك.\n\n💬 سيتم فتح واتساب، الرجاء إرفاق الصورة يدوياً مع الرسالة.\n\n📍 يمكنك الآن مشاركة الصورة مع المطعم.`);
+      }, 500);
       
-      alert(`✅ تم إنشاء فاتورة رقم #${invoiceNum}\n📸 تم حفظ صورة الفاتورة على جهازك\n💬 سيتم فتح واتساب لإرسال تفاصيل الطلب`);
-      
-      URL.revokeObjectURL(imageUrl);
+      setTimeout(() => {
+        URL.revokeObjectURL(imageUrl);
+      }, 5000);
       
     }, 'image/png', 1.0);
     
   } catch(error) {
     console.error('خطأ في إنشاء الصورة:', error);
     alert('حدث خطأ في إنشاء الصورة. سيتم إرسال النص فقط.');
-    
-    // إرسال نص عادي كبديل
-    sendTextOnly();
+    sendTextOnlyFallback();
   }
   
-  // إخفاء العنصر مرة أخرى
-  previewElem.style.left = '-9999px';
+  // إخفاء العنصر
+  setTimeout(() => {
+    captureElem.style.left = '-9999px';
+  }, 1000);
 }
 
-// دالة بديلة لإرسال النص فقط
-function sendTextOnly() {
+// دالة بديلة في حالة فشل الصورة
+function sendTextOnlyFallback() {
   const name = document.getElementById("cust-name").value.trim();
   const phone = document.getElementById("cust-phone").value.trim();
   const address = document.getElementById("cust-addr").value.trim();
@@ -239,5 +262,18 @@ function sendTextOnly() {
   if (typeof incrementInvoiceNumber === 'function') incrementInvoiceNumber();
   
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, "_blank");
-  alert(`✅ تم إرسال الطلب رقم #${invoiceNum}`);
+  alert(`✅ تم إرسال الطلب رقم #${invoiceNum} (نص فقط)`);
+}
+
+// دالة مساعدة لتجنب XSS
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+    return c;
+  });
 }
