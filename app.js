@@ -1,4 +1,7 @@
 // ======== منطق الموقع ========
+// في أعلى ملف app.js بعد تعريف const cart
+console.log("✅ app.js loaded, cart ready");
+window.cart = cart; // جعل cart متاح globally للتسهيل
 const sections = window.__SECTIONS__ || [];
 const cart = new Map(); // name -> {name,unitPrice,priceLabel,qty}
 
