@@ -917,3 +917,30 @@ input::placeholder {
     padding: 0.2rem 0.6rem;
   }
 }
+/* تنسيقات فاتورة الصورة */
+#invoice-preview {
+  font-family: 'Cairo', 'Amiri', sans-serif;
+  box-sizing: border-box;
+}
+
+#invoice-preview * {
+  box-sizing: border-box;
+}
+
+/* تنسيق الطباعة - عند طباعة الصفحة */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-preview, #invoice-preview * {
+    visibility: visible;
+  }
+  #invoice-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 8cm;
+    margin: 0;
+    padding: 0.5cm;
+  }
+}
