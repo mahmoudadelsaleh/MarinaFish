@@ -1,5 +1,3 @@
-const cart = new Map(); // name -> {name,unitPrice,priceLabel,qty}
-
 function parsePrice(p){const m=String(p).match(/\d+/);return m?parseInt(m[0],10):0}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
@@ -90,7 +88,6 @@ function updateCartUI(){
   document.getElementById("t-total").textContent=total;
 }
 
-// هنا تم حل مشكلة اختفاء الاسم نهائياً بإذن الله
 function renderCartLines(){
   const box = document.getElementById("cart-lines");
   const form = document.getElementById("cart-form");
@@ -99,15 +96,9 @@ function renderCartLines(){
     form.style.display="none"; return;
   }
   form.style.display="block";
-  
-  let html = "";
-  for(const l of cart.values()){
-    html += `
+  box.innerHTML = Array.from(cart.values()).map(l=>`
     <div class="line">
-      <div class="name">
-        <b style="display:block; white-space:normal; overflow:visible; font-weight:bold; color:var(--primary); margin-bottom:4px;">${esc(l.name)}</b>
-        <small>${l.unitPrice} ج.م × ${l.qty}</small>
-      </div>
+      <div class="name"><b>${esc(l.name)}</b><small>${l.unitPrice} ج.م × ${l.qty}</small></div>
       <div class="qty">
         <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
         <span>${l.qty}</span>
@@ -115,9 +106,7 @@ function renderCartLines(){
       </div>
       <div class="lp">${l.unitPrice*l.qty} ج.م</div>
       <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
-    </div>`;
-  }
-  box.innerHTML = html;
+    </div>`).join("");
 }
 
 function openCart(){document.getElementById("cart-modal").classList.add("open");updateCartUI()}
