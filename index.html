@@ -17,6 +17,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="مارينا فيش">
 <link rel="apple-touch-icon" href="icon-192x192.png">
+
+<!-- html2canvas لتحويل الفاتورة إلى صورة -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -99,7 +102,12 @@
   </div>
 </div>
 
-<!-- ⚠️ ترتيب تحميل الملفات مهم جداً -->
+<!-- عنصر خفي لتحويل الفاتورة إلى صورة -->
+<div id="invoice-preview" style="position: fixed; left: -9999px; top: 0; opacity: 0; pointer-events: none; background: white; width: 8cm; padding: 0.5cm; font-family: 'Cairo', sans-serif; direction: rtl; color: #1a1a2e;">
+  <div id="invoice-content"></div>
+</div>
+
+<!-- ملفات الموقع - الترتيب مهم جداً -->
 <script src="menu.js"></script>
 <script src="delivery.js"></script>
 <script src="whatsapp.js"></script>
