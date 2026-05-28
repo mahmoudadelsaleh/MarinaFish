@@ -1,6 +1,6 @@
-// ======== خدمة التوصيل ========
-const DELIVERY_FEE = 50; // رسم التوصيل 50 جنيه
-const WHATSAPP_NUMBER = "01040440885"; // رقم الواتساب الجديد
+// ======== خدمة التوصيل ونظام الفاتورة ========
+const DELIVERY_FEE = 50;
+const WHATSAPP_NUMBER = "01040440885";
 const SHOP_NAME = "مارينا فيش";
 
 // ======== نظام رقم الفاتورة ========
@@ -8,22 +8,16 @@ function getInvoiceNumber() {
   const today = new Date().toDateString();
   const stored = localStorage.getItem("invoice_data");
   let invoiceNum = 701;
-  let lastDate = null;
   
   if (stored) {
     try {
       const data = JSON.parse(stored);
-      lastDate = data.date;
-      if (lastDate === today) {
+      if (data.date === today) {
         invoiceNum = data.number;
-      } else {
-        // يوم جديد - يبدأ من 701
-        invoiceNum = 701;
       }
     } catch(e) {}
   }
   
-  // حفظ الرقم الجديد
   localStorage.setItem("invoice_data", JSON.stringify({
     date: today,
     number: invoiceNum
