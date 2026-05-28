@@ -88,3 +88,142 @@
   .bounce{animation:bounce 1.5s infinite}
   @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   .scroll-down{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);color:var(--primary);z-index:2;font-size:2rem}
+/* ======== تحسينات السلة للموبايل ======== */
+@media (max-width: 640px) {
+  .modal-content {
+    padding: 1rem;
+  }
+  
+  .line {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    position: relative;
+    padding-bottom: 0.75rem;
+  }
+  
+  .line .name {
+    flex: 1 1 100%;
+    margin-bottom: 0.25rem;
+  }
+  
+  .line .name b {
+    font-size: 1rem;
+    display: inline-block;
+    margin-left: 0.5rem;
+  }
+  
+  .line .name small {
+    display: inline-block;
+    font-size: 0.75rem;
+  }
+  
+  .line .qty {
+    order: 1;
+    margin-left: auto;
+  }
+  
+  .line .lp {
+    order: 2;
+    font-size: 0.9rem;
+    min-width: auto;
+  }
+  
+  .line .rm {
+    order: 3;
+    margin-right: auto;
+  }
+  
+  /* تحسين عرض النص */
+  .line .name b,
+  .line .name small {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
+/* تحسين عام لبطاقات السلة */
+.line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  background: var(--card);
+  transition: all 0.2s;
+}
+
+.line .name {
+  flex: 2;
+  min-width: 0;
+}
+
+.line .name b {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+  color: var(--fg);
+}
+
+.line .name small {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.line .qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(217, 179, 90, 0.1);
+  border-radius: 2rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.line .qty button {
+  background: transparent;
+  color: var(--primary);
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+.line .qty button:hover {
+  background: rgba(217, 179, 90, 0.2);
+}
+
+.line .qty span {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+.line .lp {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 0.85rem;
+  min-width: 4rem;
+  text-align: left;
+}
+
+.line .rm {
+  color: #e57373;
+  background: rgba(229, 115, 115, 0.1);
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.line .rm:hover {
+  background: rgba(229, 115, 115, 0.2);
+  transform: scale(1.05);
+}
