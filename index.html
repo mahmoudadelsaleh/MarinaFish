@@ -2,13 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>مارينا فيش — أرقى المأكولات البحرية</title>
 <meta name="description" content="منيو مطعم مارينا فيش — صواني، طواجن، ووجبات بحرية طازجة يومياً">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap">
 <link rel="stylesheet" href="style.css">
+
+<!-- PWA Support -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مارينا فيش">
+<link rel="apple-touch-icon" href="icon-192x192.png">
 </head>
 <body>
 
@@ -50,29 +58,79 @@
 <div class="modal" id="cart-modal" onclick="if(event.target===this)closeCart()">
   <div class="modal-content" style="position:relative">
     <button class="modal-close" onclick="closeCart()">✕</button>
-    <h2>طلبك</h2>
-    <p class="modal-desc">راجع الفاتورة ثم أرسلها للمحل عبر واتساب لتأكيد الطلب</p>
+    <h2>🧾 الفاتورة</h2>
+    <p class="modal-desc">راجع طلبك ثم أكمل البيانات لإرسال الطلب للمطبخ</p>
     <div id="cart-lines"></div>
     <div id="cart-form" style="display:none">
-      <input type="text" id="cust-name" placeholder="الاسم">
-      <input type="tel" id="cust-phone" placeholder="رقم الموبايل">
-      <input type="text" id="cust-addr" placeholder="العنوان بالتفصيل">
-      <div class="totals">
-        <div class="row"><span>المجموع الفرعي</span><span><span id="t-sub">0</span> ج.م</span></div>
-        <div class="row"><span>🛵 خدمة التوصيل</span><span><span id="t-del">0</span> ج.م</span></div>
-        <div class="hr"></div>
-        <div class="row total"><span>الإجمالي</span><span><span id="t-total">0</span> ج.م</span></div>
-        <p class="note">* يُضاف رسم التوصيل تلقائياً. التوصيل لمناطق الخدمة فقط.</p>
+      <!-- بيانات العميل -->
+      <div class="form-group">
+        <label>👤 الاسم الكامل <span class="required">*</span></label>
+        <input type="text" id="cust-name" placeholder="مثال: أحمد محمد">
       </div>
-      <button class="send-wa" onclick="sendWhatsApp()">💬 إرسال الطلب عبر واتساب</button>
+      
+      <div class="form-group">
+        <label>📞 رقم الهاتف <span class="required">*</span></label>
+        <input type="tel" id="cust-phone" placeholder="مثال: 01012345678">
+      </div>
+      
+      <div class="form-group">
+        <label>📍 العنوان بالتفصيل <span class="required">*</span></label>
+        <input type="text" id="cust-addr" placeholder="الشارع - المنطقة - المدينة">
+      </div>
+      
+      <div class="form-group">
+        <label>⏰ وقت الاستلام المطلوب</label>
+        <input type="text" id="pickup-time" placeholder="مثال: 8:00 مساءً أو خلال ساعة">
+      </div>
+      
+      <div class="form-group">
+        <label>📝 ملاحظات إضافية (اختياري)</label>
+        <textarea id="cust-notes" rows="2" placeholder="أي تعليمات خاصة للطلب..."></textarea>
+      </div>
+      
+      <!-- إجماليات الفاتورة -->
+      <div class="totals">
+        <div class="row">
+          <span>المجموع الفرعي</span>
+          <span><span id="t-sub">0</span> ج.م</span>
+        </div>
+        <div class="row">
+          <span>🛵 خدمة التوصيل</span>
+          <span><span id="t-del">0</span> ج.م</span>
+        </div>
+        <div class="hr"></div>
+        <div class="row total">
+          <span>🇪🇬 الإجمالي</span>
+          <span><span id="t-total">0</span> ج.م</span>
+        </div>
+      </div>
+      
+      <button class="send-wa" onclick="sendWhatsApp()">
+        💬 إرسال الطلب عبر واتساب
+      </button>
     </div>
   </div>
 </div>
 
-<!-- ملفات الإعدادات (سهلة التعديل) — لازم تتحمّل قبل app.js -->
+<!-- ملفات الإعدادات -->
 <script src="menu.js"></script>
 <script src="delivery.js"></script>
 <script src="whatsapp.js"></script>
 <script src="app.js"></script>
+
+<script>
+  // تسجيل Service Worker لـ PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('SW registered: ', registration);
+        })
+        .catch(error => {
+          console.log('SW registration failed: ', error);
+        });
+    });
+  }
+</script>
 </body>
 </html>
