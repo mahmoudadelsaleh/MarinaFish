@@ -1,4 +1,4 @@
-// ======== منطق الموقع (لا تعدّل إلا إذا كنت تعرف ما تفعل) ========
+// ======== منطق الموقع ========
 const sections = window.__SECTIONS__ || [];
 const cart = new Map(); // name -> {name,unitPrice,priceLabel,qty}
 
@@ -94,22 +94,33 @@ function updateCartUI(){
 function renderCartLines(){
   const box = document.getElementById("cart-lines");
   const form = document.getElementById("cart-form");
-  if(cart.size===0){
-    box.innerHTML = `<p style="text-align:center;color:var(--muted);padding:2rem 0">سلة الطلب فارغة</p>`;
-    form.style.display="none"; return;
+  if(cart.size === 0){
+    box.innerHTML = `<p style="text-align:center;color:var(--muted);padding:2rem 0">🛒 سلة الطلب فارغة</p>`;
+    form.style.display = "none";
+    return;
   }
-  form.style.display="block";
-  box.innerHTML = Array.from(cart.values()).map(l=>`
-    <div class="line">
-      <div class="name"><b>${esc(l.name)}</b><small>${l.unitPrice} ج.م × ${l.qty}</small></div>
-      <div class="qty">
-        <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
-        <span>${l.qty}</span>
-        <button onclick="decItem('${encodeURIComponent(l.name)}')">−</button>
+  form.style.display = "block";
+  
+  let html = '';
+  for(const l of cart.values()){
+    const itemTotal = l.unitPrice * l.qty;
+    html += `
+      <div class="line">
+        <div class="name">
+          <b>${esc(l.name)}</b>
+          <small>${l.unitPrice} ج.م</small>
+        </div>
+        <div class="qty">
+          <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
+          <span>${l.qty}</span>
+          <button onclick="decItem('${encodeURIComponent(l.name)}')">−</button>
+        </div>
+        <div class="lp">${itemTotal} ج.م</div>
+        <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
       </div>
-      <div class="lp">${l.unitPrice*l.qty} ج.م</div>
-      <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
-    </div>`).join("");
+    `;
+  }
+  box.innerHTML = html;
 }
 
 function openCart(){document.getElementById("cart-modal").classList.add("open");updateCartUI()}
