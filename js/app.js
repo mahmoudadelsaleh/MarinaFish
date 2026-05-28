@@ -1,3 +1,5 @@
+const cart = new Map();
+
 function parsePrice(p){const m=String(p).match(/\d+/);return m?parseInt(m[0],10):0}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
@@ -35,7 +37,6 @@ function refreshAllSlots(){
   document.querySelectorAll("[data-slot]").forEach(slot=>{
     const name = decodeURIComponent(slot.getAttribute("data-slot"));
     const line = cart.get(name);
-    const item = findItem(name);
     if(line){
       slot.innerHTML = `<div class="qty">
         <button onclick="addItem('${encodeURIComponent(name)}')">+</button>
@@ -96,9 +97,15 @@ function renderCartLines(){
     form.style.display="none"; return;
   }
   form.style.display="block";
-  box.innerHTML = Array.from(cart.values()).map(l=>`
+  
+  let html = "";
+  for(const l of cart.values()){
+    html += `
     <div class="line">
-      <div class="name"><b>${esc(l.name)}</b><small>${l.unitPrice} ج.م × ${l.qty}</small></div>
+      <div class="name">
+        <b>${esc(l.name)}</b>
+        <small>${l.unitPrice} ج.م × ${l.qty}</small>
+      </div>
       <div class="qty">
         <button onclick="addItem('${encodeURIComponent(l.name)}')">+</button>
         <span>${l.qty}</span>
@@ -106,32 +113,6 @@ function renderCartLines(){
       </div>
       <div class="lp">${l.unitPrice*l.qty} ج.م</div>
       <button class="rm" onclick="removeItem('${encodeURIComponent(l.name)}')">🗑</button>
-    </div>`).join("");
-}
-
-function openCart(){document.getElementById("cart-modal").classList.add("open");updateCartUI()}
-function closeCart(){document.getElementById("cart-modal").classList.remove("open")}
-
-function sendWhatsApp(){
-  if(cart.size===0) return;
-  const {sub,total} = totals();
-  const name = document.getElementById("cust-name").value.trim();
-  const phone = document.getElementById("cust-phone").value.trim();
-  const addr = document.getElementById("cust-addr").value.trim();
-  const lines = [];
-  lines.push(`🐟 *طلب جديد من ${SHOP_NAME}*`,"","*الأصناف:*");
-  let i=1; for(const l of cart.values()){
-    lines.push(`${i++}. ${l.name} × ${l.qty} = ${l.unitPrice*l.qty} ج.م`);
+    </div>`;
   }
-  lines.push("",`المجموع الفرعي: ${sub} ج.م`,`🛵 خدمة التوصيل: ${DELIVERY_FEE} ج.م`,`*الإجمالي: ${total} ج.م*`);
-  if(name||phone||addr){
-    lines.push("","*بيانات العميل:*");
-    if(name) lines.push(`الاسم: ${name}`);
-    if(phone) lines.push(`الموبايل: ${phone}`);
-    if(addr) lines.push(`العنوان: ${addr}`);
-  }
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`,"_blank");
-}
-
-document.getElementById("year").textContent = new Date().getFullYear();
-renderNav(); renderMenu(); updateCartUI();
+  box.innerHTML =
