@@ -68,7 +68,7 @@
   .modal-desc{font-size:.85rem;color:var(--muted);text-align:right;margin:.25rem 0 1rem}
   .line{display:flex;align-items:center;gap:.5rem;border:1px solid var(--border);border-radius:.5rem;padding:.75rem;margin-bottom:.5rem}
   
-  /* التعديل هنا: إزالة الـ overflow وإضافة خصائص تسمح بظهور الاسم كاملاً */
+  /* التعديل المصلح هنا: إلغاء الـ overflow المسبب للاختفاء وتلوين الاسم بالذهبي */
   .line .name{flex:1;min-width:0}
   .line .name b{display:block;font-weight:700;color:var(--primary);white-space:normal;word-break:break-word;margin-bottom:4px}
   
