@@ -1,73 +1,111 @@
-// ======== إعدادات الواتساب ========
-const WHATSAPP_NUMBER = "01040440885";
-const SHOP_NAME = "مارينا فيش";
+// ======== إعدادات وإرسال الواتساب ========
 
 function sendWhatsApp() {
-  if (cart.size === 0) return;
+  console.log("🔵 تم الضغط على زر الإرسال");
+  console.log("حجم السلة:", cart ? cart.size : "cart غير موجود");
   
-  const { sub, total } = totals();
+  // التحقق من وجود cart
+  if (typeof cart === 'undefined') {
+    alert("❌ خطأ في النظام. الرجاء تحديث الصفحة.");
+    return;
+  }
+  
+  if (cart.size === 0) {
+    alert("❌ السلة فارغة! أضف بعض الأصناف أولاً.");
+    return;
+  }
+  
+  // جلب البيانات من الحقول
   const name = document.getElementById("cust-name").value.trim();
   const phone = document.getElementById("cust-phone").value.trim();
   const address = document.getElementById("cust-addr").value.trim();
   const pickupTime = document.getElementById("pickup-time").value.trim();
   const notes = document.getElementById("cust-notes").value.trim();
   
+  console.log("الاسم:", name, "الهاتف:", phone, "العنوان:", address);
+  
   // التحقق من البيانات الأساسية
-  if (!name || !phone || !address) {
-    alert("❌ الرجاء إدخال الاسم ورقم الهاتف والعنوان");
+  if (!name) {
+    alert("❌ الرجاء إدخال الاسم");
+    document.getElementById("cust-name").focus();
+    return;
+  }
+  if (!phone) {
+    alert("❌ الرجاء إدخال رقم الهاتف");
+    document.getElementById("cust-phone").focus();
+    return;
+  }
+  if (!address) {
+    alert("❌ الرجاء إدخال العنوان بالتفصيل");
+    document.getElementById("cust-addr").focus();
     return;
   }
   
-  // إنشاء رقم فاتورة جديد
-  const invoiceNum = getInvoiceNumber();
+  // حساب المجاميع
+  let subTotal = 0;
+  let itemsList = [];
+  let counter = 1;
+  
+  for (const l of cart.values()) {
+    const itemTotal = l.unitPrice * l.qty;
+    subTotal += itemTotal;
+    itemsList.push(`${l.name} (${l.unitPrice} ج.م × ${l.qty} = ${itemTotal} ج.م)`);
+  }
+  
+  const deliveryFee = DELIVERY_FEE || 50;
+  const totalAmount = subTotal + deliveryFee;
+  
+  // الحصول على رقم الفاتورة
+  let invoiceNum = 701;
+  if (typeof getInvoiceNumber === 'function') {
+    invoiceNum = getInvoiceNumber();
+  }
+  
+  // إنشاء التاريخ
   const now = new Date();
   const invoiceDate = now.toLocaleString('ar-EG');
   
-  // بناء الفاتورة
-  let lines = [];
-  lines.push(`🏝️ *${SHOP_NAME}*`);
-  lines.push(`📄 فاتورة رقم: #${invoiceNum}`);
-  lines.push(`📅 ${invoiceDate}`);
-  lines.push(`━━━━━━━━━━━━━━━━━━`);
-  lines.push(``);
+  // بناء نص الفاتورة
+  let message = `🏝️ *مارينا فيش*\n`;
+  message += `📄 فاتورة رقم: #${invoiceNum}\n`;
+  message += `📅 ${invoiceDate}\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n\n`;
   
-  // الأصناف (بدون أرقام)
-  let itemCounter = 1;
-  for (const l of cart.values()) {
-    const itemTotal = l.unitPrice * l.qty;
-    lines.push(`🟡 ${l.name}`);
-    lines.push(`   ${l.unitPrice} ج.م × ${l.qty} = ${itemTotal} ج.م`);
-    lines.push(``);
+  // الأصناف (بدون أرقام تسلسلية)
+  for (const item of itemsList) {
+    message += `🟡 ${item}\n\n`;
   }
   
-  lines.push(`━━━━━━━━━━━━━━━━━━`);
-  lines.push(`💰 المجموع الفرعي: ${sub} ج.م`);
-  lines.push(`🛵 خدمة التوصيل: ${DELIVERY_FEE} ج.م`);
-  lines.push(`💵 *الإجمالي: ${total} ج.م*`);
-  lines.push(`━━━━━━━━━━━━━━━━━━`);
-  lines.push(``);
-  lines.push(`👤 *بيانات العميل:*`);
-  lines.push(`📛 الاسم: ${name}`);
-  lines.push(`📞 الهاتف: ${phone}`);
-  lines.push(`📍 العنوان: ${address}`);
+  message += `━━━━━━━━━━━━━━━━━━\n`;
+  message += `💰 المجموع الفرعي: ${subTotal} ج.م\n`;
+  message += `🛵 خدمة التوصيل: ${deliveryFee} ج.م\n`;
+  message += `💵 *الإجمالي: ${totalAmount} ج.م*\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+  message += `👤 *بيانات العميل:*\n`;
+  message += `📛 الاسم: ${name}\n`;
+  message += `📞 الهاتف: ${phone}\n`;
+  message += `📍 العنوان: ${address}\n`;
+  
   if (pickupTime) {
-    lines.push(`⏰ وقت الاستلام: ${pickupTime}`);
+    message += `⏰ وقت الاستلام: ${pickupTime}\n`;
   }
   if (notes) {
-    lines.push(`📝 ملاحظات: ${notes}`);
+    message += `📝 ملاحظات: ${notes}\n`;
   }
-  lines.push(``);
-  lines.push(`✨ شكراً لتسوقكم مع مارينا فيش ✨`);
   
-  // زيادة رقم الفاتورة للطلب التالي
-  incrementInvoiceNumber();
+  message += `\n✨ شكراً لتسوقكم مع مارينا فيش ✨`;
+  
+  console.log("الرسالة المرسلة:", message);
+  
+  // زيادة رقم الفاتورة
+  if (typeof incrementInvoiceNumber === 'function') {
+    incrementInvoiceNumber();
+  }
   
   // فتح واتساب
-  window.open(
-    `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`,
-    "_blank"
-  );
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  console.log("فتح الرابط:", whatsappUrl);
+  window.open(whatsappUrl, "_blank");
   
-  // عرض رسالة تأكيد
-  alert(`✅ تم إرسال الطلب رقم #${invoiceNum} بنجاح!\nسيتم التواصل معكم قريباً لتأكيد الطلب.`);
+  alert(`✅ تم إرسال الطلب رقم #${invoiceNum} بنجاح!\nسيتم فتح واتساب لإرسال الطلب.`);
 }
