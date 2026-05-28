@@ -1,6 +1,6 @@
 // ======== خدمة التوصيل ونظام الفاتورة ========
 const DELIVERY_FEE = 50;
-const WHATSAPP_NUMBER = "00201111214238";
+const WHATSAPP_NUMBER = "+201111214238";
 const SHOP_NAME = "مارينا فيش";
 
 // ======== نظام رقم الفاتورة ========
