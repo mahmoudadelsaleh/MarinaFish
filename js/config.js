@@ -2,7 +2,7 @@ const WHATSAPP_NUMBER="201040440805";
 const DELIVERY_FEE=30;
 const SHOP_NAME="مارينا فيش";
 const SHOP_LOGO="🐟";
-const SHOP_PHONE="01040440805";
+const SHOP_PHONE="01111214238";
 const SHOP_ADDRESS="من البحر إلى مائدتك";
 
 // ترقيم الفواتير يبدأ يومياً من
@@ -10,7 +10,7 @@ const INVOICE_START_NUMBER = 501;
 
 // بيانات دخول لوحة الإدارة (يمكنك تغييرها)
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "marina2025";
+const ADMIN_PASSWORD = "marina2026";
 
 window.__SECTIONS__ = [
   {
