@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة الإدارة — مارينا فيش</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<div id="login-view">
+  <div class="login-box">
+    <h2>🔒 لوحة الإدارة</h2>
+    <input type="text" id="u" placeholder="اسم المستخدم" autocomplete="username">
+    <input type="password" id="p" placeholder="كلمة المرور" autocomplete="current-password">
+    <button onclick="doLogin()">دخول</button>
+    <div class="err" id="login-err"></div>
+    <p style="text-align:center;margin-top:1rem;font-size:.8rem;color:var(--muted)"><a href="index.html" style="color:var(--gold)">← العودة للموقع</a></p>
+  </div>
+</div>
+
+<!-- اللوحة -->
+<div id="panel-view" class="admin-wrap" style="display:none">
+  <h1>🐟 لوحة إدارة مارينا فيش</h1>
+
+  <div class="admin-actions">
+    <button onclick="renderPanel()">🔄 تحديث</button>
+    <button onclick="exportData()">⬇ تصدير JSON</button>
+    <button class="danger" onclick="resetAll()">🗑 مسح كل البيانات</button>
+    <button onclick="logout()">🚪 خروج</button>
+    <a href="index.html"><button>🏠 الموقع</button></a>
+  </div>
+
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <div class="admin-section">
+    <h3>📊 إجمالي مبيعات كل صنف</h3>
+    <table class="admin-table">
+      <thead><tr><th>الصنف</th><th>الكمية</th><th>الإجمالي (ج.م)</th></tr></thead>
+      <tbody id="items-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="admin-section">
+    <h3>🧾 الفواتير</h3>
+    <div id="invoices-list"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+const LS_INV="mf_invoices", LS_NUM="mf_invnum", LS_VIS="mf_visits", LS_AUTH="mf_admin_auth";
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+
+function doLogin(){
+  const u=$("u").value.trim(), p=$("p").value;
+  if(u===ADMIN_USERNAME && p===ADMIN_PASSWORD){
+    sessionStorage.setItem(LS_AUTH,"1");
+    showPanel();
+  } else {
+    $("login-err").textContent="بيانات الدخول غير صحيحة";
+  }
+}
+function logout(){sessionStorage.removeItem(LS_AUTH);location.reload()}
+
+function showPanel(){
+  $("login-view").style.display="none";
+  $("panel-view").style.display="block";
+  renderPanel();
+}
+
+function getInvoices(){try{return JSON.parse(localStorage.getItem(LS_INV)||"[]")}catch(e){return []}}
+function getVisits(){try{return JSON.parse(localStorage.getItem(LS_VIS)||'{"total":0,"days":{}}')}catch(e){return {total:0,days:{}}}}
+
+function renderPanel(){
+  const invs = getInvoices();
+  const visits = getVisits();
+
+  const totalRevenue = invs.reduce((s,i)=>s+i.total,0);
+  const totalSubs = invs.reduce((s,i)=>s+i.sub,0);
+  const totalDelivery = invs.reduce((s,i)=>s+(i.del||0),0);
+  const todayKey = new Date().toISOString().slice(0,10);
+  const todayInvs = invs.filter(i=>i.date && i.date.startsWith(todayKey));
+  const todayRevenue = todayInvs.reduce((s,i)=>s+i.total,0);
+
+  $("stats-grid").innerHTML = `
+    ${stat("👥 إجمالي الزوار", visits.total, "")}
+    ${stat("📅 زوار اليوم", visits.days[todayKey]||0, "")}
+    ${stat("🧾 عدد الفواتير", invs.length, "")}
+    ${stat("📆 فواتير اليوم", todayInvs.length, "")}
+    ${stat("💰 إجمالي المبيعات", totalRevenue, "ج.م")}
+    ${stat("💵 مبيعات اليوم", todayRevenue, "ج.م")}
+    ${stat("🛵 مستحقات الدليفري", totalDelivery, "ج.م")}
+    ${stat("📦 صافي الطلبات", totalSubs, "ج.م")}
+  `;
+
+  // أصناف
+  const items = {};
+  invs.forEach(i=>i.items.forEach(it=>{
+    if(!items[it.name]) items[it.name]={qty:0,total:0};
+    items[it.name].qty += it.qty;
+    items[it.name].total += it.unitPrice*it.qty;
+  }));
+  const sorted = Object.entries(items).sort((a,b)=>b[1].total-a[1].total);
+  $("items-tbody").innerHTML = sorted.length
+    ? sorted.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="num">${v.qty}</td><td class="num">${v.total}</td></tr>`).join("")
+    : `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">لا توجد فواتير بعد</td></tr>`;
+
+  // قائمة الفواتير
+  const list = invs.slice().reverse();
+  $("invoices-list").innerHTML = list.length
+    ? list.map(i=>`
+      <div class="inv-item">
+        <div class="h"><span>فاتورة #${i.number}</span><span>${i.total} ج.م</span></div>
+        <div class="meta">${esc(i.date)} ${i.customer.name?'• '+esc(i.customer.name):''} ${i.customer.phone?'• '+esc(i.customer.phone):''}</div>
+        ${i.customer.addr?`<div class="meta">📍 ${esc(i.customer.addr)}</div>`:''}
+        <ul>${i.items.map(it=>`<li>${esc(it.name)} × ${it.qty} = ${it.unitPrice*it.qty} ج.م</li>`).join('')}</ul>
+        <div class="meta">فرعي: ${i.sub} • توصيل: ${i.del||0} • الإجمالي: <b style="color:var(--gold)">${i.total}</b> ج.م</div>
+      </div>`).join("")
+    : `<p style="text-align:center;color:var(--muted);padding:1rem">لا توجد فواتير بعد</p>`;
+}
+
+function stat(label,value,unit){
+  return `<div class="stat-card"><div class="label">${label}</div><div class="value">${value}</div><div class="unit">${unit}</div></div>`;
+}
+
+function exportData(){
+  const data={invoices:getInvoices(),visits:getVisits(),invnum:JSON.parse(localStorage.getItem(LS_NUM)||"{}"),exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`marina-data-${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+
+function resetAll(){
+  if(!confirm("هل أنت متأكد من مسح كل الفواتير والإحصائيات؟ لا يمكن التراجع.")) return;
+  localStorage.removeItem(LS_INV);localStorage.removeItem(LS_VIS);localStorage.removeItem(LS_NUM);
+  renderPanel();
+}
+
+// تحقق من الدخول
+if(sessionStorage.getItem(LS_AUTH)==="1") showPanel();
+$("p").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+</script>
+</body>
+</html>
